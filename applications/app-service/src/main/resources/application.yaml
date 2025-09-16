@@ -1,0 +1,42 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: "reports"
+  devtools:
+    add-properties: false
+  profiles:
+    active: local
+    include: null
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+cors:
+  allowed-origins: "http://localhost:4200,http://localhost:8080"
+jwt:
+  secret: "${JWT_SECRET}"
+  expiration: "${JWT_TOKEN_EXPIRATION}"
+aws:
+  url: "${AWS_URL}"
+  account-id: "${AWS_ACCOUNT_ID}"
+  access-key-id: "${AWS_ACCESS_KEY_ID}"
+  secret-access-key: "${AWS_SECRET_ACCESS_KEY}"
+  region: "${AWS_REGION}"
+  table-approved-loans-reports: "${AWS_DYNAMODB_TABLE_APPROVED_LOANS_REPORTS}"
+  report-id-approved-loans: "${AWS_DYNAMODB_REPORT_ID_APPROVED_LOANS}"
+  dynamodb:
+    endpoint: "https://dynamodb.us-east-1.amazonaws.com"
+entrypoint:
+  sqs:
+    region: "${AWS_REGION}"
+    queueUrl: "${AWS_QUEUE_LOAN_APPROVED_REPORTS}"
+    waitTimeSeconds: 20
+    maxNumberOfMessages: 10
+    visibilityTimeoutSeconds: 10
+    numberOfThreads: 1

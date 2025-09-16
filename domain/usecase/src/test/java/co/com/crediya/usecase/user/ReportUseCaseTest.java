@@ -1,0 +1,185 @@
+package co.com.crediya.usecase.user;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+
+/*@ExtendWith(MockitoExtension.class)
+public class ReportUseCaseTest {
+
+
+    @Mock
+    private LoanStatusRepository loanStatusRepository;
+    @Mock
+    private LoanRequestRepository repository;
+    @Mock
+    private SqsService sqsService;
+    @Mock
+    LoggerService loggerService;
+
+    private ReportUseCase reportUseCase;
+
+
+    private final Long loanRequestId = 1L;
+    private final String statusCode = LoanStatusEnum.APROB.name();
+    private final String queueName = "test-queue";
+
+    private LoanRequestUpdateStatus loanRequestUpdateStatus;
+
+    @BeforeEach
+    void setUp() {
+        loanRequestUpdateStatus = new LoanRequestUpdateStatus();
+        loanRequestUpdateStatus.setId(loanRequestId);
+        loanRequestUpdateStatus.setStatus(statusCode);
+
+        reportUseCase = new ReportUseCase(repository, loanStatusRepository, loggerService, sqsService);
+    }
+
+    @Test
+    void shouldUpdateLoanStatusSuccessfully() {
+        LoanStatus newStatus = new LoanStatus(2L, statusCode, "APROBADA");
+        LoanStatus previousStatus = new LoanStatus(1L, "PENDING", "Pendiente de revision");
+
+        LoanRequestSummary loanRequestSummary = new LoanRequestSummary();
+        loanRequestSummary.setId(loanRequestId);
+        loanRequestSummary.setLoanStatus(previousStatus);
+        loanRequestSummary.setLastName("Perez");
+        loanRequestSummary.setFirstName("Andres");
+        loanRequestSummary.setEmail("andrespereza@example.com");
+
+        when(loanStatusRepository.findStatusByCode(statusCode)).thenReturn(Mono.just(newStatus));
+        when(repository.findLoanRequestsById(loanRequestId)).thenReturn(Mono.just(loanRequestSummary));
+        when(repository.updateloanRequest(loanRequestId, newStatus.getId())).thenReturn(Mono.empty());
+        when(sqsService.sendMessage(any(MessageBody.class), eq(queueName))).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .verifyComplete();
+
+        verify(repository).updateloanRequest(loanRequestId, newStatus.getId());
+        verify(sqsService).sendMessage(any(MessageBody.class), eq(queueName));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenStatusCodeNotFound() {
+        when(loanStatusRepository.findStatusByCode(statusCode)).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .expectErrorSatisfies(error -> {
+                    assertTrue(error instanceof ValidationException);
+                    ValidationException ve = (ValidationException) error;
+                    Assertions.assertTrue(ve.getErrors().stream().anyMatch(msg -> msg.contains("El estado")));
+                    Assertions.assertTrue(ve.getErrors().stream().anyMatch(msg -> msg.contains("es incorrecto")));
+                })
+                .verify();
+
+        verifyNoInteractions(repository);
+        verifyNoInteractions(sqsService);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenLoanRequestNotFound() {
+        LoanStatus newStatus = new LoanStatus(2L, statusCode, "Aprobado");
+
+        when(loanStatusRepository.findStatusByCode(statusCode)).thenReturn(Mono.just(newStatus));
+        when(repository.findLoanRequestsById(loanRequestId)).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .expectErrorSatisfies(error -> {
+                    assertTrue(error instanceof ValidationException);
+                    ValidationException ve = (ValidationException) error;
+                    Assertions.assertTrue(ve.getErrors().stream().anyMatch(msg -> msg.contains("La solicitud de prestamo con ID")));
+                    Assertions.assertTrue(ve.getErrors().stream().anyMatch(msg -> msg.contains("no existe en la base de datos")));
+                })
+                .verify();
+
+        verify(repository, never()).updateloanRequest(any(), any());
+        verifyNoInteractions(sqsService);
+    }
+
+    @Test
+    void shouldRollbackWhenSqsFails() {
+        LoanStatus newStatus = new LoanStatus(2L, statusCode, "Aprobado");
+        LoanStatus previousStatus = new LoanStatus(1L, "PEND", "Pendiente de revision");
+
+        LoanRequestSummary loanRequestSummary = new LoanRequestSummary();
+        loanRequestSummary.setId(loanRequestId);
+        loanRequestSummary.setEmail("test@email.com");
+        loanRequestSummary.setFirstName("John");
+        loanRequestSummary.setLastName("Doe");
+        loanRequestSummary.setLoanStatus(previousStatus);
+
+        when(loanStatusRepository.findStatusByCode(statusCode)).thenReturn(Mono.just(newStatus));
+        when(repository.findLoanRequestsById(loanRequestId)).thenReturn(Mono.just(loanRequestSummary));
+        when(repository.updateloanRequest(loanRequestId, newStatus.getId())).thenReturn(Mono.empty());
+        when(sqsService.sendMessage(any(), eq(queueName))).thenReturn(Mono.error(new RuntimeException("SQS error")));
+        when(repository.updateloanRequest(loanRequestId, previousStatus.getId())).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .expectErrorSatisfies(error -> {
+                    assertTrue(error instanceof ValidationException);
+                    ValidationException ve = (ValidationException) error;
+                    Assertions.assertTrue(ve.getErrors().stream().anyMatch(msg -> msg.contains("Error enviando mensaje a SQS, reealizando rollback")));
+                })
+                .verify();
+
+        verify(repository).updateloanRequest(loanRequestId, previousStatus.getId());
+    }
+
+    @Test
+    void shouldSendCorrectMessageToSqs() {
+        LoanStatus newStatus = new LoanStatus(2L, statusCode, "Aprobado");
+        LoanStatus previousStatus = new LoanStatus(1L, "PEND", "Pendiente de revision");
+
+        LoanRequestSummary loanRequestSummary = new LoanRequestSummary();
+        loanRequestSummary.setId(loanRequestId);
+        loanRequestSummary.setEmail("user@test.com");
+        loanRequestSummary.setFirstName("Alice");
+        loanRequestSummary.setLastName("Smith");
+        loanRequestSummary.setLoanStatus(previousStatus);
+
+        ArgumentCaptor<MessageBody> messageCaptor = ArgumentCaptor.forClass(MessageBody.class);
+
+        when(loanStatusRepository.findStatusByCode(statusCode)).thenReturn(Mono.just(newStatus));
+        when(repository.findLoanRequestsById(loanRequestId)).thenReturn(Mono.just(loanRequestSummary));
+        when(repository.updateloanRequest(any(), any())).thenReturn(Mono.empty());
+        when(sqsService.sendMessage(any(), eq(queueName))).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .verifyComplete();
+
+        verify(sqsService).sendMessage(messageCaptor.capture(), eq(queueName));
+
+        MessageBody sentMessage = messageCaptor.getValue();
+        assertEquals("1", sentMessage.getIdLoanRequest());
+        assertEquals("Aprobado", sentMessage.getStatus());
+        assertEquals("user@test.com", sentMessage.getEmail());
+        assertEquals("Alice Smith", sentMessage.getFullName());
+    }
+
+    @Test
+    void shouldNotSendToSqsWhenStatusIsNeitherAprobNorRech() {
+        LoanStatus newStatus = new LoanStatus(3L, LoanStatusEnum.CAN.name(), "En revisión");
+        LoanStatus previousStatus = new LoanStatus(1L, LoanStatusEnum.PEND.name(), "Pendiente");
+
+        LoanRequestSummary loanRequestSummary = new LoanRequestSummary();
+        loanRequestSummary.setId(loanRequestId);
+        loanRequestSummary.setLoanStatus(previousStatus);
+        loanRequestSummary.setEmail("test@test.com");
+        loanRequestSummary.setFirstName("Maria");
+        loanRequestSummary.setLastName("Lopez");
+
+        loanRequestUpdateStatus.setStatus(LoanStatusEnum.CAN.name());
+
+        when(loanStatusRepository.findStatusByCode(LoanStatusEnum.CAN.name())).thenReturn(Mono.just(newStatus));
+        when(repository.findLoanRequestsById(loanRequestId)).thenReturn(Mono.just(loanRequestSummary));
+        when(repository.updateloanRequest(loanRequestId, newStatus.getId())).thenReturn(Mono.empty());
+
+        StepVerifier.create(reportUseCase.updateLoanStatus(loanRequestUpdateStatus, queueName))
+                .verifyComplete();
+
+        verify(repository).updateloanRequest(loanRequestId, newStatus.getId());
+        verifyNoInteractions(sqsService);
+
+    }
+}*/
