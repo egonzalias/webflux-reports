@@ -1,0 +1,13 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation project(':model')
+    implementation platform('software.amazon.awssdk:bom:2.25.38')
+    implementation 'org.springframework:spring-context'
+    implementation 'software.amazon.awssdk:sns'
+    implementation 'software.amazon.awssdk:netty-nio-client'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'io.projectreactor:reactor-core:3.5.11'
+}

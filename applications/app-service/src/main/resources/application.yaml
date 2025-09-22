@@ -30,6 +30,7 @@ aws:
   region: "${AWS_REGION}"
   table-approved-loans-reports: "${AWS_DYNAMODB_TABLE_APPROVED_LOANS_REPORTS}"
   report-id-approved-loans: "${AWS_DYNAMODB_REPORT_ID_APPROVED_LOANS}"
+  daily-loan-reports: "${AWS_SNS_TOPIC_DAILY_LOAN_REPORTS}"
   dynamodb:
     endpoint: "https://dynamodb.us-east-1.amazonaws.com"
 entrypoint:

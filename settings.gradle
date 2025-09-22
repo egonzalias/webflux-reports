@@ -30,3 +30,5 @@ include ':metrics'
 project(':metrics').projectDir = file('./infrastructure/helpers/metrics')
 include ':dynamo-db'
 project(':dynamo-db').projectDir = file('./infrastructure/driven-adapters/dynamo-db')
+include ':aws-sns-adapter'
+project(':aws-sns-adapter').projectDir = file('./infrastructure/driven-adapters/aws-sns-adapter')

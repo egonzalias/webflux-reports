@@ -4,7 +4,7 @@ import co.com.crediya.model.exception.ValidationException;
 import co.com.crediya.model.report.enums.LoanStatusEnum;
 import co.com.crediya.model.report.gateways.LoggerService;
 import co.com.crediya.sqs.listener.dto.LoanEvaluationResultEvent;
-import co.com.crediya.usecase.user.ReportUseCase;
+import co.com.crediya.usecase.report.ReportUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

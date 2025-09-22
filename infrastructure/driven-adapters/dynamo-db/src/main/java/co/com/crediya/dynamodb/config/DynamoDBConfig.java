@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
@@ -17,7 +18,7 @@ import java.net.URI;
 @Configuration
 public class DynamoDBConfig {
 
-    @Bean
+    /*@Bean
     @Profile({"local"})
     public DynamoDbAsyncClient amazonDynamoDB(@Value("${aws.dynamodb.endpoint}") String endpoint,
                                               @Value("${aws.region}") String region,
@@ -28,19 +29,20 @@ public class DynamoDBConfig {
                 .endpointOverride(URI.create(endpoint))
                 .overrideConfiguration(o -> o.addMetricPublisher(publisher))
                 .build();
-    }
+    }*/
 
     @Bean
-    @Profile({"dev", "cer", "pdn"})
+    //@Profile({"dev", "cer", "pdn"})
     public DynamoDbAsyncClient amazonDynamoDBAsync(MetricPublisher publisher, @Value("${aws.region}") String region) {
         return DynamoDbAsyncClient.builder()
-                .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                //.credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                .credentialsProvider(DefaultCredentialsProvider.create())
                 .region(Region.of(region))
                 .overrideConfiguration(o -> o.addMetricPublisher(publisher))
                 .build();
     }
 
-    @Bean
+    /*@Bean
     @Profile("docker")
     public DynamoDbAsyncClient amazonDynamoDBDocker(
             @Value("${aws.region}") String region,
@@ -51,7 +53,7 @@ public class DynamoDBConfig {
                 .region(Region.of(region))
                 .overrideConfiguration(o -> o.addMetricPublisher(publisher))
                 .build();
-    }
+    }*/
 
     @Bean
     public DynamoDbEnhancedAsyncClient getDynamoDbEnhancedAsyncClient(DynamoDbAsyncClient client) {

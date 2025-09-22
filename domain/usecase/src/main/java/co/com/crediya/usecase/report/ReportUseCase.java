@@ -1,4 +1,4 @@
-package co.com.crediya.usecase.user;
+package co.com.crediya.usecase.report;
 
 import co.com.crediya.model.report.Report;
 import co.com.crediya.model.report.gateways.*;

@@ -1,6 +1,6 @@
 package co.com.crediya.api;
 
-import co.com.crediya.usecase.user.ReportUseCase;
+import co.com.crediya.usecase.report.ReportUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
